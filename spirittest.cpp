@@ -92,8 +92,7 @@ int main()
 
   using geo::icao_area;
 
-  //std::string locstr("553124N 0045830W - 552040N 0042722W - 551848N 0044702W - 553124N 0045830W");
-  std::string locstr("A circle, 2.5 nm radius centred at 553034N 0043540W on longest notified runway (12/30)");
+  std::string locstr(" 552303N 0045827W-553022N 0043438W-553744N 0041228W thence clockwise by an arc of a circle radius 15NM centred on 553034N 0043540W to 552459N 0041113W-552112N 0041552W-551618N 0042742W thence clockwise by an arc of a circle radius 15NM centred on 553034N 0043540W to 552303N 0045827W");
   std::vector<Location> area;
   bool r = x3::phrase_parse(locstr.begin(), locstr.end(), icao_area, x3::space, area);
 

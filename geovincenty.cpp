@@ -97,7 +97,7 @@ BearingDistance distance(Location start, Location end)
     double const C = f/16.*cos2_α*(4+f*(4-3*cos2_α));
     double const new_λ = L + (1-C)*f*sin_α*(σ+C*sin_σ*(cos_2_σ_m + C*cos_σ*(-1+2*pow(cos_2_σ_m, 2))));
     Δλ = new_λ - λ;
-    fmt::print("Δλ: {}\n", Δλ);
+    //fmt::print("Δλ: {}\n", Δλ);
     λ = new_λ;
   }
 

@@ -23,8 +23,11 @@ using x3::_attr;
 using x3::_val;
 using x3::lit;
 using x3::rule;
-using fusion::at_c;
 using x3::double_;
+using x3::omit;
+using x3::no_case;
+using x3::char_;
+using fusion::at_c;
 
 using two_digit_type = x3::int_parser<double, 10, 2, 2>;
 two_digit_type const two_digit = {};
@@ -100,6 +103,7 @@ struct unit_ : x3::symbols<double>
     add
         ("ft", 0.3048)
         ("nm", 1852.)
+        ("NM", 1852.)
         ("km", 1000.)
         ("m", 1.);
   }
@@ -122,11 +126,56 @@ auto const circle_def = (x3::no_case[lit("A circle") > -lit(",")] > double_ > un
 
 
 
+// arcparser -> std::vector<geo::Locations>
+struct direction_ : x3::symbols<double>
+{
+  direction_()
+  {
+    add
+        ("clockwise", 1)
+        ("anti-clockwise", -1.)
+        ("anticlockwise", -1.)
+        ;
+  }
+} const direction;
+
+auto arc_builder = [](auto& ctx){
+  Location const& arc_begin = _val(ctx).back();
+  double direction = at_c<0>(_attr(ctx));
+  //double radius = at_c<1>(_attr(ctx)) * at_c<2>(_attr(ctx));
+  Location const& center = at_c<3>(_attr(ctx));
+  Location const& arc_end = at_c<4>(_attr(ctx));
+
+  BearingDistance arcstart = distance(center, arc_begin);
+  arcstart.bear = Azimuth{(arcstart.bear < 0) ? 360 + arcstart.bear : arcstart.bear};
+  BearingDistance arcend = distance(center, arc_end);
+  arcend.bear = Azimuth{(arcend.bear < 0) ? 360 + arcend.bear : arcend.bear};
+
+  double angle = arcstart.bear + direction;
+  double target_angle = arcend.bear;
+  while(!(angle > target_angle -0.5 && angle < target_angle+0.5))
+  {
+    angle = (angle + direction);
+    if(angle >= 360.)
+       angle -= 360;
+    if(angle < 0)
+      angle += 360;
+    _val(ctx).push_back(endPoint(center, Azimuth{angle}, arcstart.dist));
+  }
+  _val(ctx).push_back(arc_end);
+};
+
+rule<struct ArcDescId, std::vector<Location>> const arc = "arc_parser";
+auto const arc_def = ((-lit("-") >> no_case[lit("thence")]) > direction >> no_case["by" > (lit("an")|lit("the")) > "arc of a circle radius"]
+                     > double_ > unit > no_case[(lit("centred")|lit("centered")) > lit("on")]
+                     > coord > no_case[lit("to")] > coord > -lit("-"))[arc_builder];
+
+
 // Icao Area Parser -> std::vector<geo::Locations>
 
 rule<struct AreaParserId, std::vector<Location>> const icao_area = "icao_area_parser";
-auto const icao_area_def = (coord % "-") | circle;
+auto const icao_area_def = +((coord % "-") | arc) | circle;
 
-BOOST_SPIRIT_DEFINE(latitude, longitude, coord, icao_area, circle);
+BOOST_SPIRIT_DEFINE(latitude, longitude, coord, icao_area, circle, arc);
 
 } // namespace geo
