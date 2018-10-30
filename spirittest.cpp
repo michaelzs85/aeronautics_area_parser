@@ -92,16 +92,50 @@ int main()
 
   using geo::icao_area;
 
-  std::string locstr(" 552303N 0045827W-553022N 0043438W-553744N 0041228W thence clockwise by an arc of a circle radius 15NM centred on 553034N 0043540W to 552459N 0041113W-552112N 0041552W-551618N 0042742W thence clockwise by an arc of a circle radius 15NM centred on 553034N 0043540W to 552303N 0045827W");
-  std::vector<Location> area;
-  bool r = x3::phrase_parse(locstr.begin(), locstr.end(), icao_area, x3::space, area);
+  std::string locstr("46 57 44.8026N 016 15 04.7511E - 46 50 46.0000N 016 20 19.0000E - entlang der ungarisch-slowenischen"
+                     "Staatsgrenze bis / along State Boundary BTN Hungary and Slovenia to - 46 52 08.6161N 016 06 49.9210E -"
+                     "entlang der Bundesgrenze bis / along State Boundary to - 46 57 44.8026N 016 15 04.7511E");
 
-  if(r)
-    for(Location const&  l : area)
-      fmt::print("{}\n", l);
-  else
-    fmt::print("FUCK\n");
+  fmt::print(
+"  <Placemark>\n"
+"    <name>REPLACEME</name>\n"
+"      <Polygon>\n"
+"        <extrude>0</extrude>\n"
+"        <altitudeMode>clampToGround</altitudeMode>\n"
+"        <outerBoundaryIs>\n"
+"          <LinearRing>\n"
+"            <coordinates>\n");
 
+  auto begin = locstr.begin();
+  do
+  {
+    std::vector<Location> area;
+    bool r = x3::phrase_parse(begin, locstr.end(), icao_area, x3::space, area);
+
+    if(r)
+      for(Location const&  l : area)
+        fmt::print("            {}\n", l);
+    else
+      fmt::print("FUCK\n");
+
+    if(begin != locstr.end())
+    {
+      std::string words;
+      bool r = x3::phrase_parse(begin, locstr.end(), -x3::lit("-") >> x3::lexeme[*(~x3::char_("-"))] >> -x3::lit("-"), x3::space, words);
+      if(r)
+        fmt::print("<!--Couldn't understand: '{}'-->\n", words);
+      else
+        fmt::print("FUCK\n");
+    }
+  }
+  while(begin != locstr.end());
+
+fmt::print(
+"          </coordinates>\n"
+"        </LinearRing>\n"
+"      </outerBoundaryIs>\n"
+"    </Polygon>\n"
+"  </Placemark>\n");
 
   return 0;
 }

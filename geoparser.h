@@ -2,6 +2,7 @@
 
 #include "geotypes.h"
 #include "geovincenty.h"
+#include "geoutils.h"
 #include "fmt/format.h"
 #include <boost/optional.hpp>
 #include <boost/spirit/home/x3.hpp>
@@ -35,6 +36,21 @@ two_digit_type const two_digit = {};
 using three_digit_type = x3::int_parser<double, 10, 3, 3>;
 three_digit_type const three_digit = {};
 
+template <typename T>
+struct no_exp_ureal_polcies : x3::ureal_policies<T>
+{
+  template <typename Iterator>
+  static bool
+  parse_exp(Iterator& /*first*/, Iterator const& /*last*/)
+  {
+    return false;
+  }
+};
+
+using no_exp_double_type = x3::real_parser<double, no_exp_ureal_polcies<double>>;
+no_exp_double_type const no_exp_double_ = {};
+
+
 // Latitude parser ddmmssH -> geo::Lat
 
 struct northsouth_ : x3::symbols<double>
@@ -60,7 +76,7 @@ auto lat_from_dms =[](auto& ctx){
 
 
 rule<struct LatRuleId, Lat> const latitude = "latitude_parser";
-auto const latitude_def = (two_digit > two_digit > two_digit > northsouth)[lat_from_dms];
+auto const latitude_def = (two_digit > two_digit > no_exp_double_ > northsouth)[lat_from_dms];
 
 
 // Longitude parser dddmmssH -> geo::Lon
@@ -87,12 +103,12 @@ auto lon_from_dms = [](auto& ctx){
 };
 
 rule<struct LonRuleId, Lon> const longitude = "longitude_parser";
-auto const longitude_def = (three_digit > two_digit > two_digit > eastwest)[lon_from_dms];
+auto const longitude_def = (three_digit > two_digit > no_exp_double_ > eastwest)[lon_from_dms];
 
 // Coord Parser ddmmssH dddmmssH -> geo::Location
 
 rule<struct CoordRuleId, Location> const coord = "coordinate_parser";
-auto const coord_def = x3::lexeme[latitude > *lit(" ") > longitude];
+auto const coord_def = latitude > longitude;
 
 // icao circle description parser
 
@@ -112,10 +128,8 @@ struct unit_ : x3::symbols<double>
 auto circle_builder = [](auto& ctx){
   Meters radius{at_c<0>(_attr(ctx)) * at_c<1>(_attr(ctx))};
   Location center = at_c<2>(_attr(ctx));
-  for(double i = 0; i < 360; i+=2)
-  {
-    _val(ctx).push_back(endPoint(center, Azimuth{i}, radius));
-  }
+  std::vector<Location> c = create_circle_points(center, radius, 2);
+  _val(ctx).insert(std::end(_val(ctx)), std::begin(c), std::end(c));
 };
 
 
@@ -146,23 +160,8 @@ auto arc_builder = [](auto& ctx){
   Location const& center = at_c<3>(_attr(ctx));
   Location const& arc_end = at_c<4>(_attr(ctx));
 
-  BearingDistance arcstart = distance(center, arc_begin);
-  arcstart.bear = Azimuth{(arcstart.bear < 0) ? 360 + arcstart.bear : arcstart.bear};
-  BearingDistance arcend = distance(center, arc_end);
-  arcend.bear = Azimuth{(arcend.bear < 0) ? 360 + arcend.bear : arcend.bear};
-
-  double angle = arcstart.bear + direction;
-  double target_angle = arcend.bear;
-  while(!(angle > target_angle -0.5 && angle < target_angle+0.5))
-  {
-    angle = (angle + direction);
-    if(angle >= 360.)
-       angle -= 360;
-    if(angle < 0)
-      angle += 360;
-    _val(ctx).push_back(endPoint(center, Azimuth{angle}, arcstart.dist));
-  }
-  _val(ctx).push_back(arc_end);
+  std::vector<Location> arc = create_arc_points(center, arc_begin, arc_end, (direction > 0) ? geo::dir::clockwise : geo::dir::anticlockwise);
+  _val(ctx).insert(std::end(_val(ctx)), std::begin(arc), std::end(arc));
 };
 
 rule<struct ArcDescId, std::vector<Location>> const arc = "arc_parser";
@@ -174,7 +173,7 @@ auto const arc_def = ((-lit("-") >> no_case[lit("thence")]) > direction >> no_ca
 // Icao Area Parser -> std::vector<geo::Locations>
 
 rule<struct AreaParserId, std::vector<Location>> const icao_area = "icao_area_parser";
-auto const icao_area_def = +((coord % "-") | arc) | circle;
+auto const icao_area_def = +((coord % (lit("-")|lit(","))) | arc) | circle;
 
 BOOST_SPIRIT_DEFINE(latitude, longitude, coord, icao_area, circle, arc);
 
