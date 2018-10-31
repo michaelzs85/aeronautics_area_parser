@@ -1,8 +1,14 @@
 #pragma once
 
 #include "fmt/format.h"
+#include <boost/spirit/home/x3.hpp>
+#include <boost/fusion/include/adapt_struct.hpp>
+#include <boost/spirit/home/x3/support/ast/position_tagged.hpp>
+
 
 namespace geo {
+
+namespace x3 = boost::spirit::x3;
 
 template<typename T, class Tag>
 struct Type
@@ -28,8 +34,9 @@ struct Meters : Type<double, struct MetersTag>
   Meters(Km v) : Type<double, struct MetersTag>(0.) {val = 1000. * v;}
 };
 
-struct Location
+struct Location : x3::position_tagged
 {
+  Location(Lat la = Lat{0.}, Lon lo = Lon{0.}) :lat(la), lon(lo) {}
   Lat lat;
   Lon lon;
 };
@@ -73,4 +80,9 @@ struct formatter<BearingDistance > {
     return format_to(ctx.begin(), "{:03.2f}° {:.2f}m", bd.bear, bd.dist);
   }
 };
-} // namespace fmt
+} // namespace geo
+
+BOOST_FUSION_ADAPT_STRUCT(
+    geo::Location,
+    lat, lon
+    );

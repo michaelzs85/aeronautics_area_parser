@@ -4,6 +4,8 @@
 #include <string>
 #include <algorithm>
 #include <boost/spirit/home/x3.hpp>
+//#include <boost/spirit/home/x3/support/utility/error_reporting.hpp>
+
 
 std::string parse_area(std::string const& input, std::string const& name)
 {
@@ -22,30 +24,41 @@ std::string parse_area(std::string const& input, std::string const& name)
 "          <LinearRing>\n"
 "            <coordinates>\n", name);
 
-  auto begin = input.begin();
+  using iterator_type = std::string::const_iterator;
+  iterator_type iter = input.begin();
+  iterator_type const end = input.end();
+
   do
   {
     std::vector<Location> area;
-    bool r = x3::phrase_parse(begin, input.end(), icao_area, x3::space, area);
-    if(r)
-      for(Location const&  l : area)
-      {
-        retval += fmt::format("            {}\n", l);
-      }
-    else
-      fmt::print("FUCK\n");
+    try {
 
-    if(begin != input.end())
+      bool r = x3::phrase_parse(iter, end, icao_area, x3::space, area);
+      if(r)
+        for(Location const&  l : area)
+        {
+          retval += fmt::format("            {}\n", l);
+        }
+    }
+    catch(std::exception ef)
+    {
+      fmt::print("last parsed name was: {}\n", name);
+      fmt::print("{}\n", ef.what());
+      exit(2);
+    }
+
+
+    if(iter != input.end())
     {
       std::string words;
-      bool r = x3::phrase_parse(begin, input.end(), -x3::lit("-") >> x3::lexeme[*(~x3::char_("-"))] >> -x3::lit("-"), x3::space, words);
+      bool r = x3::phrase_parse(iter, end, -x3::lit("-") >> x3::lexeme[*(~x3::char_("-"))] >> -x3::lit("-"), x3::space, words);
       if(r)
-        retval += fmt::format("<!--Couldn't understand: '{}'-->\n", words);
+        retval += fmt::format("            <!--Couldn't understand: '{}'-->\n", words);
       else
         fmt::print("FUCK\n");
     }
   }
-  while(begin != input.end());
+  while(iter != end);
   retval +=
 "          </coordinates>\n"
 "        </LinearRing>\n"
@@ -94,7 +107,7 @@ int main(int argc, char *argv[])
     {
       std::string area = parse_area(line, name);
       fmt::print(area);
-      mode = 2;
+      mode = 0;
     }
     else if(mode >= 2)
     {

@@ -6,15 +6,14 @@
 #include "fmt/format.h"
 #include <boost/optional.hpp>
 #include <boost/spirit/home/x3.hpp>
-#include <boost/fusion/include/adapt_struct.hpp>
 #include <boost/fusion/include/io.hpp>
 #include <vector>
 #include <boost/optional.hpp>
+//#include <boost/spirit/home/x3/support/utility/error_reporting.hpp>
+//#include <boost/spirit/home/x3/support/ast/position_tagged.hpp>
+//#include <boost/spirit/home/x3/support/utility/annotate_on_success.hpp>
 
-BOOST_FUSION_ADAPT_STRUCT(
-    geo::Location,
-    lat, lon
-    );
+
 
 namespace geo {
 
@@ -30,6 +29,7 @@ using x3::double_;
 using x3::omit;
 using x3::no_case;
 using x3::char_;
+using x3::with;
 using fusion::at_c;
 
 using two_digit_type = x3::int_parser<double, 10, 2, 2>;
@@ -51,6 +51,10 @@ struct no_exp_ureal_polcies : x3::ureal_policies<T>
 
 using no_exp_double_type = x3::real_parser<double, no_exp_ureal_polcies<double>>;
 no_exp_double_type const no_exp_double_ = {};
+
+
+rule<struct SeperatorId> const sep = "seperator_parser";
+auto const sep_def = lit("-")|",";
 
 
 // Latitude parser ddmmssH -> geo::Lat
@@ -78,7 +82,7 @@ auto lat_from_dms =[](auto& ctx){
 
 
 rule<struct LatRuleId, Lat> const latitude = "latitude_parser";
-auto const latitude_def = (two_digit > two_digit > -no_exp_double_ > northsouth)[lat_from_dms];
+auto const latitude_def = (two_digit > -lit("°") > two_digit > -lit("'") > -no_exp_double_ > -lit("\"") > northsouth)[lat_from_dms];
 
 
 // Longitude parser dddmmssH -> geo::Lon
@@ -105,12 +109,16 @@ auto lon_from_dms = [](auto& ctx){
 };
 
 rule<struct LonRuleId, Lon> const longitude = "longitude_parser";
-auto const longitude_def = (three_digit > two_digit > -no_exp_double_ > eastwest)[lon_from_dms];
+auto const longitude_def = (three_digit > -lit("°") > two_digit > -lit("'") > -no_exp_double_ > -lit("\"") > eastwest)[lon_from_dms];
 
 // Coord Parser ddmmssH dddmmssH -> geo::Location
 
-rule<struct CoordRuleId, Location> const coord = "coordinate_parser";
-auto const coord_def = latitude > longitude;
+
+
+struct CoordRuleId;
+
+rule<CoordRuleId, Location> const coord = "coordinate_parser";
+auto const coord_def = latitude > -lit(",") > longitude;
 
 // icao circle description parser
 
@@ -127,6 +135,32 @@ struct unit_ : x3::symbols<double>
   }
 } const unit;
 
+auto is_arc_center = [](auto& ctx){
+  std::string text = _attr(ctx);
+  std::transform(text.begin(), text.end(), text.begin(), [](auto c) -> decltype (c) {return std::tolower(c);});
+  if(text.find("center") == std::string::npos
+     && text.find("centre") == std::string::npos)
+  {
+    x3::_pass(ctx) = false;
+  }
+};
+
+rule<struct ArcCenterId> const arccenter = "arc_center_parser";
+auto const arccenter_def = x3::lexeme[no_case[*(~x3::digit)]][is_arc_center];
+
+auto is_circle_init = [](auto& ctx){
+  std::string text = _attr(ctx);
+  std::transform(text.begin(), text.end(), text.begin(), [](auto c) -> decltype (c) {return std::tolower(c);});
+  if(text.find("circle") == std::string::npos)
+  {
+    x3::_pass(ctx) = false;
+  }
+};
+
+rule<struct CircleInitId> const circleinit = "circle_init_parser";
+auto const circleinit_def = x3::lexeme[no_case[*(~x3::digit)]][is_circle_init];
+
+
 auto circle_builder = [](auto& ctx){
   Meters radius{at_c<0>(_attr(ctx)) * at_c<1>(_attr(ctx))};
   Location center = at_c<2>(_attr(ctx));
@@ -136,26 +170,11 @@ auto circle_builder = [](auto& ctx){
 
 
 rule<struct CircleDescId, std::vector<Location>> const circle = "circle_parser";
-auto const circle_def = (x3::no_case[lit("A circle") > -lit(",")] > double_ > unit
-                        > x3::no_case[lit("radius centred at")] > coord
+auto const circle_def = (circleinit > double_ > unit
+                        > arccenter > coord
                         > x3::omit[*x3::char_])[circle_builder];
 
-
-
-// arcparser -> std::vector<geo::Locations>
-//struct direction_ : x3::symbols<double>
-//{
-//  direction_()
-//  {
-//    add
-//        ("clockwise", 1)
-//        ("anti-clockwise", -1.)
-//        ("anticlockwise", -1.)
-//        ;
-//  }
-//} const direction;
-
-
+// arc parsing
 
 auto is_arc_init = [](auto& ctx){
   std::string text = _attr(ctx);
@@ -181,19 +200,6 @@ auto is_arc_init = [](auto& ctx){
 rule<struct ArcInitId, double> const arcinit = "arc_init_parser";
 auto const arcinit_def = x3::lexeme[no_case[*(~x3::digit)]][is_arc_init];
 
-auto is_arc_center = [](auto& ctx){
-  std::string text = _attr(ctx);
-  std::transform(text.begin(), text.end(), text.begin(), [](auto c) -> decltype (c) {return std::tolower(c);});
-  if(text.find("center") == std::string::npos
-     && text.find("centre") == std::string::npos)
-  {
-    x3::_pass(ctx) = false;
-  }
-};
-
-rule<struct ArcCenterId> const arccenter = "arc_center_parser";
-auto const arccenter_def = x3::lexeme[no_case[*(~x3::digit)]][is_arc_center];
-
 auto arc_builder = [](auto& ctx){
   Location const& arc_begin = _val(ctx).back();
   double direction = at_c<0>(_attr(ctx));
@@ -206,19 +212,15 @@ auto arc_builder = [](auto& ctx){
 };
 
 rule<struct ArcDescId, std::vector<Location>> const arc = "arc_parser";
-auto const arc_def = (-lit("-") >> (arcinit > double_ > unit > arccenter > coord
-                                     > -no_case[(lit("to")|","|"-")] > coord) >> -(lit("-")|","))[arc_builder];
-
-//auto const arc_def = ((-lit("-") >> no_case[lit("thence")]) > direction >> no_case["by" > (lit("an")|lit("the")) > "arc of a circle radius"]
-//                     > double_ > unit > no_case[(lit("centred")|lit("centered")) > lit("on")]
-//                     > coord > no_case[lit("to")] > coord > -lit("-"))[arc_builder];
+auto const arc_def = (-sep >> (arcinit > double_ > unit > arccenter > coord
+                                     > -no_case[(lit("to")|sep)] > coord) >> -sep)[arc_builder];
 
 
 // Icao Area Parser -> std::vector<geo::Locations>
 
 rule<struct AreaParserId, std::vector<Location>> const icao_area = "icao_area_parser";
-auto const icao_area_def = (+((coord % (lit("-")|",")) | arc) | circle) >> -(lit(".")|",");
+auto const icao_area_def = (+((coord % sep) | arc) | circle) >> -(lit(".")|",");
 
-BOOST_SPIRIT_DEFINE(latitude, longitude, coord, icao_area, circle, arcinit, arccenter, arc);
+BOOST_SPIRIT_DEFINE(sep, latitude, longitude, coord, icao_area, circleinit, circle, arcinit, arccenter, arc);
 
 } // namespace geo
