@@ -1,34 +1,34 @@
-#include "geotypes.h"
-#include "geovincenty.h"
 #include "fmt/format.h"
-#include <cmath>
-
-using geo::Lat;
-using geo::Lon;
-using geo::Location;
-using geo::BearingDistance;
-using geo::Azimuth;
-using geo::Meters;
-using geo::NM;
-using geo::Km;
-using geo::distance;
-using geo::endPoint;
-
+#include "geoast.h"
+#include "geoast_adapted.h"
+#include "geolocation.h"
 
 int main()
 {
-  Location start{Lat{47.060991}, Lon{15.451820}};
-  Location end = endPoint(start, Azimuth(198), Meters(200));
-  fmt::print("end: {}\n", end);
+  using iterator_type = std::string::const_iterator;
 
+  using geo::lat_;
+  using geo::lon_;
+  using geo::coord_;
 
-//  Location begin{Lat{55.477222}, Lon{-4.277500}};
-//  Location centre{Lat{55.509444}, Lon{-4.594444}};
+  namespace x3 = boost::spirit::x3;
 
-//  BearingDistance bd = distance(centre, begin);
-//  fmt::print("bd: {}\n", bd);
+  // 46°45'00"N , 002°50'00"E
 
-  std::string lat("553034N");
+  std::string tst = "46°4500\"N 002°50'00.44\"E";
+  iterator_type iter = tst.begin();
+  iterator_type const end = tst.end();
 
+  geo::ast::coord_data coord;
+  bool r = x3::phrase_parse(iter, end, coord_(), x3::space, coord);
+
+  if(r && iter == end)
+  {
+    fmt::print("parsed coord succesfully {} {}!\n", coord.lat.deg, coord.lon.deg);
+  }
+  else
+  {
+    fmt::print("failed parse!\n");
+  }
   return 0;
 }

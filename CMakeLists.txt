@@ -2,7 +2,7 @@ cmake_minimum_required(VERSION 3.1)
 
 project(geo)
 
-set(CMAKE_CXX_STANDARD 14)
+set(CMAKE_CXX_STANDARD 17)
 SET(CMAKE_EXPORT_COMPILE_COMMANDS TRUE)
 
 include(${CMAKE_BINARY_DIR}/conanbuildinfo.cmake)
@@ -15,11 +15,17 @@ set(headers
     geoparser.h
     geovincenty.h
     geoutils.h
+    geoast.h
+    geoast_adapted.h
+    geoparser_config.h
+    geolocation.h
+    geolocation_def.h
     )
 
 set(sources
     geovincenty.cpp
     geoutils.cpp
+    geolocation.cpp
     )
 
 add_executable(${PROJECT_NAME} ${headers} ${sources} "main.cpp")
