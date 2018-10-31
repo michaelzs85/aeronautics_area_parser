@@ -98,7 +98,7 @@ int main(int argc, char *argv[])
     }
     else if(mode >= 2)
     {
-      if(mode >= 4)
+      if(mode >= 2)
         mode = 0;
       else
         mode++;

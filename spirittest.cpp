@@ -92,9 +92,7 @@ int main()
 
   using geo::icao_area;
 
-  std::string locstr("46 57 44.8026N 016 15 04.7511E - 46 50 46.0000N 016 20 19.0000E - entlang der ungarisch-slowenischen"
-                     "Staatsgrenze bis / along State Boundary BTN Hungary and Slovenia to - 46 52 08.6161N 016 06 49.9210E -"
-                     "entlang der Bundesgrenze bis / along State Boundary to - 46 57 44.8026N 016 15 04.7511E");
+  std::string locstr("5520N 00655W, 542500N 0081000W, 5355N 00530W, 522000N 0053000W, 5100N 00800W, 5100N 01500W, 5400N 01500W, 5434N 01000W, 5445N 00900W, 5520N 00815W, 5525N 00720W, 5520N 00655W,");
 
   fmt::print(
 "  <Placemark>\n"
