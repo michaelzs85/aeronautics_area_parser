@@ -150,7 +150,10 @@ auto const arc__def = -sep > arcinit > double_ > unit > center > coord_ > -no_ca
 x3::rule<class circletag, ast::circle_data> const circle_ = "circle";
 auto const circle__def = circleinit > double_ > unit > center > coord_ > x3::omit[*x3::char_];
 
-BOOST_SPIRIT_DEFINE(lat_, lon_, coord_, arc_, circle_);
+x3::rule<class areatag, ast_type > const area_ = "area";
+auto const area__def = ((coord_| arc_) % sep) | circle_ >> -(lit(".")|",");
+
+BOOST_SPIRIT_DEFINE(lat_, lon_, coord_, arc_, circle_, area_);
 
 }
 
@@ -177,6 +180,11 @@ parser::arc_type arc_()
 parser::circle_type circle_()
 {
   return parser::circle_;
+}
+
+parser::area_type area_()
+{
+  return parser::area_;
 }
 
 }

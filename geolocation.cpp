@@ -14,5 +14,6 @@ BOOST_SPIRIT_INSTANTIATE(lon_type, iterator_type, context_type);
 BOOST_SPIRIT_INSTANTIATE(coord_type, iterator_type, context_type);
 BOOST_SPIRIT_INSTANTIATE(arc_type, iterator_type, context_type);
 BOOST_SPIRIT_INSTANTIATE(circle_type, iterator_type, context_type);
+BOOST_SPIRIT_INSTANTIATE(area_type, iterator_type, context_type);
 
 }
