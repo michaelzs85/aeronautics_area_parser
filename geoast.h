@@ -35,6 +35,13 @@ struct arc_data
   boost::optional<coord_data> target;
 };
 
+struct circle_data
+{
+  double radius;
+  double unit;
+  coord_data center;
+};
+
 using boost::fusion::operator<<;
 }
 

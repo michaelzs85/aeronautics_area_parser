@@ -117,8 +117,19 @@ auto is_arc_init = [](auto& ctx){
 x3::rule<class arcinittag, double> const arcinit = "arc_init_parser";
 auto const arcinit_def = x3::lexeme[no_case[*(~x3::digit)]][is_arc_init];
 
-BOOST_SPIRIT_DEFINE(arcinit, center);
+auto is_circle_init = [](auto& ctx){
+  std::string text = _attr(ctx);
+  std::transform(text.begin(), text.end(), text.begin(), [](auto c) -> decltype (c) {return std::tolower(c);});
+  if(text.find("circle") == std::string::npos)
+  {
+    x3::_pass(ctx) = false;
+  }
+};
 
+x3::rule<struct circleinittag> const circleinit = "circle_init_parser";
+auto const circleinit_def = x3::lexeme[no_case[*(~x3::digit)]][is_circle_init];
+
+BOOST_SPIRIT_DEFINE(arcinit, center, circleinit);
 } // namespace private
 
 using namespace _private;
@@ -136,7 +147,10 @@ auto const coord__def = lat_ > -lit(",") > lon_;
 x3::rule<class arctag, ast::arc_data> const arc_ = "arc";
 auto const arc__def = -sep > arcinit > double_ > unit > center > coord_ > -no_case[(lit("to")|sep)] > -coord_;
 
-BOOST_SPIRIT_DEFINE(lat_, lon_, coord_, arc_);
+x3::rule<class circletag, ast::circle_data> const circle_ = "circle";
+auto const circle__def = circleinit > double_ > unit > center > coord_ > x3::omit[*x3::char_];
+
+BOOST_SPIRIT_DEFINE(lat_, lon_, coord_, arc_, circle_);
 
 }
 
@@ -158,6 +172,11 @@ parser::coord_type coord_()
 parser::arc_type arc_()
 {
   return parser::arc_;
+}
+
+parser::circle_type circle_()
+{
+  return parser::circle_;
 }
 
 }

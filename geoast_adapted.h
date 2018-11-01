@@ -27,3 +27,8 @@ BOOST_FUSION_ADAPT_STRUCT(geo::ast::arc_data,
                           center,
                           target);
 
+BOOST_FUSION_ADAPT_STRUCT(geo::ast::circle_data,
+                          radius,
+                          unit,
+                          center);
+
