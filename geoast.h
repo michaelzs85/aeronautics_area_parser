@@ -26,6 +26,15 @@ struct coord_data
   lon_data lon;
 };
 
+struct arc_data
+{
+  double direction;
+  double radius;
+  double unit;
+  coord_data center;
+  boost::optional<coord_data> target;
+};
+
 using boost::fusion::operator<<;
 }
 

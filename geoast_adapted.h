@@ -19,3 +19,11 @@ BOOST_FUSION_ADAPT_STRUCT(geo::ast::lon_data,
 BOOST_FUSION_ADAPT_STRUCT(geo::ast::coord_data,
                           lat,
                           lon)
+
+BOOST_FUSION_ADAPT_STRUCT(geo::ast::arc_data,
+                          direction,
+                          radius,
+                          unit,
+                          center,
+                          target);
+

@@ -6,11 +6,15 @@
 #include "geoast.h"
 #include "geoast_adapted.h"
 #include "geolocation.h"
+#include "fmt/format.h"
 
 namespace geo {
 namespace parser {
 
 namespace x3 = boost::spirit::x3;
+using x3::lit;
+using x3::double_;
+using x3::no_case;
 
 namespace _private {
 // TODO:: move this internal stuff in _private into separate header file
@@ -60,10 +64,65 @@ struct eastwest_ : x3::symbols<double>
   }
 } const eastwest;
 
+struct unit_ : x3::symbols<double>
+{
+  unit_()
+  {
+    add
+        ("ft", 0.3048)
+        ("nm", 1852.)
+        ("NM", 1852.)
+        ("km", 1000.)
+        ("m", 1.);
+  }
+} const unit;
+
+//x3::rule<class septag> const sep = "seperator";
+auto const sep = lit("-")|",";
+
+auto is_center = [](auto& ctx){
+  std::string text = _attr(ctx);
+  std::transform(text.begin(), text.end(), text.begin(), [](auto c) -> decltype (c) {return std::tolower(c);});
+  if(text.find("center") == std::string::npos
+     && text.find("centre") == std::string::npos)
+  {
+    x3::_pass(ctx) = false;
+  }
+};
+
+x3::rule<struct centertag> const center = "arc_center_parser";
+auto const center_def = x3::lexeme[no_case[*(~x3::digit)]][is_center];
+
+
+auto is_arc_init = [](auto& ctx){
+  std::string text = _attr(ctx);
+  std::transform(text.begin(), text.end(), text.begin(), [](auto c) -> decltype (c) {return std::tolower(c);});
+
+  // there should be the word "arc" in there somewhere
+  if(text.find("arc") == std::string::npos)
+  {
+    x3::_pass(ctx) = false;
+    return;
+  }
+  // if a direction is specified use it, otherwise assume clockwise
+  if(text.find("anticlockwise") != std::string::npos
+     || text.find("anti-clockwise") != std::string::npos)
+  {
+    _val(ctx) = -1.;
+    return;
+  }
+  _val(ctx) = 1.;
+};
+
+x3::rule<class arcinittag, double> const arcinit = "arc_init_parser";
+auto const arcinit_def = x3::lexeme[no_case[*(~x3::digit)]][is_arc_init];
+
+BOOST_SPIRIT_DEFINE(arcinit, center);
+
 } // namespace private
 
 using namespace _private;
-using x3::lit;
+
 
 x3::rule<class lattag, ast::lat_data> const lat_ = "latitude";
 auto const lat__def = two_digit > -lit("°") > two_digit > -lit("'") > -no_exp_double_ > -lit("\"") > northsouth;
@@ -74,8 +133,10 @@ auto const lon__def = three_digit > -lit("°") > two_digit > -lit("'") > -no_exp
 x3::rule<class coordtag, ast::coord_data> const coord_ = "coordinate";
 auto const coord__def = lat_ > -lit(",") > lon_;
 
+x3::rule<class arctag, ast::arc_data> const arc_ = "arc";
+auto const arc__def = -sep > arcinit > double_ > unit > center > coord_ > -no_case[(lit("to")|sep)] > -coord_;
 
-BOOST_SPIRIT_DEFINE(lat_, lon_, coord_);
+BOOST_SPIRIT_DEFINE(lat_, lon_, coord_, arc_);
 
 }
 
@@ -92,6 +153,11 @@ parser::lon_type lon_()
 parser::coord_type coord_()
 {
   return parser::coord_;
+}
+
+parser::arc_type arc_()
+{
+  return parser::arc_;
 }
 
 }
