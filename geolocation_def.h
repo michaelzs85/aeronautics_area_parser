@@ -77,8 +77,8 @@ struct unit_ : x3::symbols<double>
   }
 } const unit;
 
-//x3::rule<class septag> const sep = "seperator";
-auto const sep = lit("-")|",";
+x3::rule<class septag> const sep = "seperator";
+auto const sep_def = lit("-")|",";
 
 auto is_center = [](auto& ctx){
   std::string text = _attr(ctx);
@@ -129,7 +129,7 @@ auto is_circle_init = [](auto& ctx){
 x3::rule<struct circleinittag> const circleinit = "circle_init_parser";
 auto const circleinit_def = x3::lexeme[no_case[*(~x3::digit)]][is_circle_init];
 
-BOOST_SPIRIT_DEFINE(arcinit, center, circleinit);
+BOOST_SPIRIT_DEFINE(arcinit, center, circleinit, sep);
 } // namespace private
 
 using namespace _private;

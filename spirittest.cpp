@@ -6,7 +6,7 @@
 #include <boost/fusion/include/adapt_struct.hpp>
 
 #include "geotypes.h"
-#include "geoparser.h"
+#include "old_geoparser.h"
 
 struct MyClass
 {

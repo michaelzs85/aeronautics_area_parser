@@ -15,8 +15,9 @@ namespace _private {
 using arcinit_type = x3::rule<class arcinittag, double>;
 using center_type = x3::rule<struct centertag>;
 using circleinit_type = x3::rule<struct circleinittag>;
+using sep_type = x3::rule<struct septag>;
 
-BOOST_SPIRIT_DECLARE(arcinit_type, center_type, circleinit_type);
+BOOST_SPIRIT_DECLARE(arcinit_type, center_type, circleinit_type, sep_type);
 }
 
 using lat_type = x3::rule<class lattag, ast::lat_data>;

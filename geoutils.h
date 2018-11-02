@@ -13,6 +13,7 @@ enum class dir : int {
 };
 
 std::vector<Location> create_circle_points(Location center, Meters radius, int pts_per_deg=1);
+std::vector<Location> create_arc_points(Location center, Location start, Location end, double dir=1., int pts_per_deg=1);
 std::vector<Location> create_arc_points(Location center, Location start, Location end, dir direction=dir::clockwise, int pts_per_deg=1);
 
 } //namespace geo

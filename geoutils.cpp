@@ -14,6 +14,16 @@ std::vector<geo::Location> geo::create_circle_points(geo::Location center, geo::
   return circle;
 }
 
+std::vector<geo::Location> geo::create_arc_points(geo::Location center, geo::Location start, geo::Location end, double dir, int pts_per_deg)
+{
+  geo::dir direction = geo::dir::clockwise;
+  if(dir < 0)
+  {
+    direction = geo::dir::anticlockwise;
+  }
+  return geo::create_arc_points(center, start, end, direction, pts_per_deg);
+}
+
 std::vector<geo::Location> geo::create_arc_points(geo::Location center, geo::Location start, geo::Location end, geo::dir direction, int pts_per_deg)
 {
   //fmt::print(">>>---");
