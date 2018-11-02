@@ -15,9 +15,10 @@ namespace _private {
 using arcinit_type = x3::rule<class arcinittag, double>;
 using center_type = x3::rule<struct centertag>;
 using circleinit_type = x3::rule<struct circleinittag>;
-using sep_type = x3::rule<struct septag>;
+using sep_type = x3::rule<class septag>;
+using text_type = x3::rule<struct texttag, std::string>;
 
-BOOST_SPIRIT_DECLARE(arcinit_type, center_type, circleinit_type, sep_type);
+BOOST_SPIRIT_DECLARE(arcinit_type, center_type, circleinit_type, sep_type, text_type);
 }
 
 using lat_type = x3::rule<class lattag, ast::lat_data>;
@@ -26,7 +27,7 @@ using coord_type = x3::rule<class coordtag, ast::coord_data>;
 using arc_type = x3::rule<class arctag, ast::arc_data>;
 using circle_type = x3::rule<class circletag, ast::circle_data>;
 
-using ast_type = boost::variant<std::vector<boost::variant<ast::coord_data, ast::arc_data>>, ast::circle_data>;
+using ast_type = boost::variant<std::vector<boost::variant<ast::coord_data, ast::arc_data, std::string>>, ast::circle_data>;
 using area_type = x3::rule<class areatag, ast_type>;
 
 BOOST_SPIRIT_DECLARE(lat_type, lon_type, coord_type, arc_type, circle_type, area_type);
@@ -37,6 +38,7 @@ parser::lon_type lon_();
 parser::coord_type coord_();
 parser::arc_type arc_();
 parser::circle_type circle_();
+parser::_private::text_type text_();
 parser::area_type area_();
 
 using ast_type = parser::ast_type;

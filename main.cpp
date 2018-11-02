@@ -4,6 +4,8 @@
 #include "boost/variant.hpp"
 #include <fstream>
 #include <filesystem>
+#include "geolocation.h"
+#include "geoparser_config.h"
 
 
 struct xml_print_helper
@@ -79,8 +81,23 @@ struct xml_printer : public boost::static_visitor<void>
   }
 };
 
+#if 0
+int main()
+{
+  namespace x3 = boost::spirit::x3;
+  std::string tst(" - entlang der Bundesgrenze bis / alongState Boundary to - 48 46 41.4438N 016 26 07.5410E");
+  geo::parser::iterator_type iter = tst.begin();
+  geo::parser::iterator_type const end = tst.end();
+
+  std::string out;
+  bool r = x3::phrase_parse(iter, end, geo::text_(), x3::space, out);
+  fmt::print("r: {} - captured text: {}\n", r, out);
+
+}
+#endif
 
 
+#if 1
 int main(int argc, char* argv[])
 {
   if(argc != 2)
@@ -105,6 +122,8 @@ int main(int argc, char* argv[])
     xml_print_helper _(infile.filename().string());
     while(std::getline(in, line))
     {
+      if(line.empty())
+        continue;
 
       if(!geo::starts_with_coord(line))
       {
@@ -129,3 +148,5 @@ int main(int argc, char* argv[])
   }
   return 0;
 }
+#endif
+

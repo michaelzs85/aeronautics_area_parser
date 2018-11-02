@@ -30,15 +30,15 @@ Location translate(ast::coord_data val)
 
 struct ast_visitor : public boost::static_visitor<void> {
 
-  std::vector<Location> area{};
+  std::vector<boost::variant<Location, std::string>> area{};
 
   struct coord_arc_visitor : public boost::static_visitor<void> {
-    std::vector<Location>& area;
-    coord_arc_visitor(std::vector<Location>& area) : area(area) {}
+    std::vector<boost::variant<Location, std::string>>& area;
+    coord_arc_visitor(std::vector<boost::variant<Location, std::string>>& area) : area(area) {}
 
     void operator()(ast::coord_data cd)
     {
-      area.emplace_back(translate(cd.lat), translate(cd.lon));
+      area.emplace_back(Location{translate(cd.lat), translate(cd.lon)});
     }
 
     void operator()(ast::arc_data ad)
@@ -47,9 +47,14 @@ struct ast_visitor : public boost::static_visitor<void> {
       if(ad.target.has_value())
         target = translate(ad.target.get());
       else
-        target = area.front();
-      std::vector<Location> arc = create_arc_points(translate(ad.center), area.back(), target, ad.direction);
+        target = boost::get<Location>(area.front());
+      std::vector<Location> arc = create_arc_points(translate(ad.center), boost::get<Location>(area.back()), target, ad.direction);
       area.insert(area.end(), arc.begin(), arc.end());
+    }
+
+    void operator()(std::string const& s)
+    {
+      area.push_back(s);
     }
 
   };
@@ -57,10 +62,11 @@ struct ast_visitor : public boost::static_visitor<void> {
   void operator()(ast::circle_data cd)
   {
     assert(area.size() == 0);
-    area = create_circle_points(translate(cd.center), Meters{cd.radius*cd.unit});
+    std::vector<Location> circle = create_circle_points(translate(cd.center), Meters{cd.radius*cd.unit});
+    area.insert(area.end(), circle.begin(), circle.end());
   }
 
-  void operator()(std::vector<boost::variant<ast::coord_data, ast::arc_data>> vd)
+  void operator()(std::vector<boost::variant<ast::coord_data, ast::arc_data, std::string>> vd)
   {
     coord_arc_visitor v(area);
     std::for_each(vd.begin(), vd.end(), [&](auto const& el){boost::apply_visitor(v, el);});
@@ -69,7 +75,7 @@ struct ast_visitor : public boost::static_visitor<void> {
 };
 using namespace _private;
 
-std::vector<Location> translate(ast_type const& ast)
+std::vector<boost::variant<Location, std::string>> translate(ast_type const& ast)
 {
   ast_visitor v;
   boost::apply_visitor(v, ast);
@@ -86,7 +92,7 @@ std::vector<boost::variant<Location, std::string>> parse_area_description(std::s
 
   std::vector<boost::variant<Location, std::string>> retval;
 
-  while(iter != end)
+  //while(iter != end)
   {
     ast_type ast;
 
@@ -96,30 +102,33 @@ std::vector<boost::variant<Location, std::string>> parse_area_description(std::s
     }
     catch(std::exception e)
     {
+      fmt::print("!!! expectation error!\n");
       /*...*/
     }
     if(!r)
     {
       fmt::print(stderr, "ERROR! Could not parse a vaild area from '{}'\n", input);
-      return {};
+      fmt::print(stderr, "dist(begin, iter): {}\n", std::distance(input.begin(), iter));
+      //return {};
     }
 
-    std::vector<Location> parsed_points = _private::translate(ast);
+    std::vector<boost::variant<Location, std::string>> parsed_points = _private::translate(ast);
     retval.insert(retval.end(), parsed_points.begin(), parsed_points.end());
 
     if(iter==end)
     {
-      break;
+
+      //break;
     }
 
-    std::string words;
+    /*std::string words;
     r = x3::phrase_parse(iter, end, -x3::lit("-") >> x3::lexeme[*(~x3::char_("-"))] >> -x3::lit("-"), x3::space, words);
     if(!r)
     {
       fmt::print(stderr, "ERROR: Problem during skipping string: '{}'\n", std::string_view(&*iter, std::distance(iter, end)));
       return {};
     }
-    retval.emplace_back(words);
+    retval.emplace_back(words);*/
   }
   return retval;
 }
@@ -130,7 +139,13 @@ bool starts_with_coord(std::string const& input)
   geo::parser::iterator_type iter = input.begin();
   geo::parser::iterator_type const end = input.end();
   geo::ast::coord_data c;
-  return x3::phrase_parse(iter, end, coord_(),x3::space, c);
+  bool retval{};
+  try {
+    retval = x3::phrase_parse(iter, end, coord_(),x3::space, c);
+  } catch (std::exception) {
+    return false;
+  }
+  return retval;
 }
 
 }

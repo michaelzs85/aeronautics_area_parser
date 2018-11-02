@@ -21,7 +21,6 @@ set(headers
     geoparser_config.h
     geolocation.h
     geolocation_def.h
-    old_geoparser.h
     )
 
 set(sources
@@ -33,9 +32,3 @@ set(sources
 
 add_executable(${PROJECT_NAME} ${headers} ${sources} "main.cpp")
 target_link_libraries(${PROJECT_NAME} ${CONAN_LIBS} stdc++fs)
-
-add_executable(spirittest ${headers} ${sources} "spirittest.cpp")
-target_link_libraries(spirittest ${CONAN_LIBS})
-
-add_executable(fileparser ${headers} ${sources} "fileparser.cpp")
-target_link_libraries(fileparser ${CONAN_LIBS})

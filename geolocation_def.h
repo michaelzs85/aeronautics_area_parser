@@ -70,15 +70,18 @@ struct unit_ : x3::symbols<double>
   {
     add
         ("ft", 0.3048)
+        ("FT", 0.3048)
         ("nm", 1852.)
         ("NM", 1852.)
         ("km", 1000.)
-        ("m", 1.);
+        ("KM", 1000.)
+        ("m", 1.)
+        ("M", 1.);
   }
 } const unit;
 
 x3::rule<class septag> const sep = "seperator";
-auto const sep_def = lit("-")|",";
+auto const sep_def = lit("-")|","|";";
 
 auto is_center = [](auto& ctx){
   std::string text = _attr(ctx);
@@ -129,7 +132,10 @@ auto is_circle_init = [](auto& ctx){
 x3::rule<struct circleinittag> const circleinit = "circle_init_parser";
 auto const circleinit_def = x3::lexeme[no_case[*(~x3::digit)]][is_circle_init];
 
-BOOST_SPIRIT_DEFINE(arcinit, center, circleinit, sep);
+x3::rule<struct texttag, std::string> const text = "textparser";
+auto const text_def = x3::lexeme[*(x3::char_ - sep)];
+
+BOOST_SPIRIT_DEFINE(arcinit, center, circleinit, sep, text);
 } // namespace private
 
 using namespace _private;
@@ -145,13 +151,13 @@ x3::rule<class coordtag, ast::coord_data> const coord_ = "coordinate";
 auto const coord__def = lat_ > -lit(",") > lon_;
 
 x3::rule<class arctag, ast::arc_data> const arc_ = "arc";
-auto const arc__def = -sep > arcinit > double_ > unit > center > coord_ > -no_case[(lit("to")|sep)] > -coord_;
+auto const arc__def = arcinit > double_ > unit > center > coord_ > -no_case[(lit("to")|sep)] > -coord_;
 
 x3::rule<class circletag, ast::circle_data> const circle_ = "circle";
 auto const circle__def = circleinit > double_ > unit > center > coord_ > x3::omit[*x3::char_];
 
 x3::rule<class areatag, ast_type > const area_ = "area";
-auto const area__def = ((coord_| arc_) % sep) | circle_ >> -(lit(".")|",");
+auto const area__def = ((coord_|arc_|text) % sep) | circle_ >> -(lit(".")|",");
 
 BOOST_SPIRIT_DEFINE(lat_, lon_, coord_, arc_, circle_, area_);
 
@@ -185,6 +191,12 @@ parser::circle_type circle_()
 parser::area_type area_()
 {
   return parser::area_;
+}
+
+
+parser::_private::text_type text_()
+{
+  return parser::_private::text;
 }
 
 }
