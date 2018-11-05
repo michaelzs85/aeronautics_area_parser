@@ -4,9 +4,6 @@
 #include "boost/variant.hpp"
 #include <fstream>
 #include <filesystem>
-#include "geolocation.h"
-#include "geoparser_config.h"
-
 
 struct xml_print_helper
 {
@@ -81,23 +78,6 @@ struct xml_printer : public boost::static_visitor<void>
   }
 };
 
-#if 0
-int main()
-{
-  namespace x3 = boost::spirit::x3;
-  std::string tst(" - entlang der Bundesgrenze bis / alongState Boundary to - 48 46 41.4438N 016 26 07.5410E");
-  geo::parser::iterator_type iter = tst.begin();
-  geo::parser::iterator_type const end = tst.end();
-
-  std::string out;
-  bool r = x3::phrase_parse(iter, end, geo::text_(), x3::space, out);
-  fmt::print("r: {} - captured text: {}\n", r, out);
-
-}
-#endif
-
-
-#if 1
 int main(int argc, char* argv[])
 {
   if(argc != 2)
@@ -135,8 +115,12 @@ int main(int argc, char* argv[])
         });
         continue;
       }
+      geo::parser::position_cache positions(line.begin(),line.end());
+      std::vector<boost::variant<geo::Location, std::string>> area = geo::parse_area_description(line, positions);
 
-      std::vector<boost::variant<geo::Location, std::string>> area = geo::parse_area_description(line);
+      auto pos = positions.position_of(area[1]);
+      fmt::print(stderr, "Here is the second element: {}\n", std::string(pos.begin(), pos.end()));
+
       {
         xml_printer visitor(last_line);
         for(auto const& loc : area)
@@ -148,5 +132,4 @@ int main(int argc, char* argv[])
   }
   return 0;
 }
-#endif
 

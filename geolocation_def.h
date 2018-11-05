@@ -17,6 +17,13 @@ using x3::double_;
 using x3::no_case;
 
 namespace _private {
+
+class arcinittag : annotate_position {};
+class centertag : annotate_position {};
+class circleinittag : annotate_position {};
+class septag : annotate_position{};
+class texttag : annotate_position {};
+
 // TODO:: move this internal stuff in _private into separate header file
 using two_digit_type = x3::int_parser<double, 10, 2, 2>;
 two_digit_type const two_digit = {};
@@ -80,7 +87,7 @@ struct unit_ : x3::symbols<double>
   }
 } const unit;
 
-x3::rule<class septag> const sep = "seperator";
+x3::rule<septag> const sep = "seperator";
 auto const sep_def = lit("-")|","|";";
 
 auto is_center = [](auto& ctx){
@@ -93,7 +100,7 @@ auto is_center = [](auto& ctx){
   }
 };
 
-x3::rule<struct centertag> const center = "arc_center_parser";
+x3::rule<centertag> const center = "arc_center_parser";
 auto const center_def = x3::lexeme[no_case[*(~x3::digit)]][is_center];
 
 
@@ -117,7 +124,7 @@ auto is_arc_init = [](auto& ctx){
   _val(ctx) = 1.;
 };
 
-x3::rule<class arcinittag, double> const arcinit = "arc_init_parser";
+x3::rule<arcinittag, double> const arcinit = "arc_init_parser";
 auto const arcinit_def = x3::lexeme[no_case[*(~x3::digit)]][is_arc_init];
 
 auto is_circle_init = [](auto& ctx){
@@ -129,10 +136,10 @@ auto is_circle_init = [](auto& ctx){
   }
 };
 
-x3::rule<struct circleinittag> const circleinit = "circle_init_parser";
+x3::rule<circleinittag> const circleinit = "circle_init_parser";
 auto const circleinit_def = x3::lexeme[no_case[*(~x3::digit)]][is_circle_init];
 
-x3::rule<struct texttag, std::string> const text = "textparser";
+x3::rule<texttag, std::string> const text = "textparser";
 auto const text_def = x3::lexeme[*(x3::char_ - sep)];
 
 BOOST_SPIRIT_DEFINE(arcinit, center, circleinit, sep, text);
@@ -140,24 +147,30 @@ BOOST_SPIRIT_DEFINE(arcinit, center, circleinit, sep, text);
 
 using namespace _private;
 
+class lattag : annotate_position {};
+class lontag : annotate_position {};
+class coordtag : annotate_position {};
+class arctag : annotate_position {};
+class circletag : annotate_position {};
+class areatag : annotate_position{};
 
-x3::rule<class lattag, ast::lat_data> const lat_ = "latitude";
+x3::rule<lattag, ast::lat_data> const lat_ = "latitude";
 auto const lat__def = two_digit > -lit("°") > two_digit > -lit("'") > -no_exp_double_ > -lit("\"") > northsouth;
 
-x3::rule<class lontag, ast::lon_data> const lon_ = "longitude";
+x3::rule<lontag, ast::lon_data> const lon_ = "longitude";
 auto const lon__def = three_digit > -lit("°") > two_digit > -lit("'") > -no_exp_double_ > -lit("\"") > eastwest;
 
-x3::rule<class coordtag, ast::coord_data> const coord_ = "coordinate";
+x3::rule<coordtag, ast::coord_data> const coord_ = "coordinate";
 auto const coord__def = lat_ > -lit(",") > lon_;
 
-x3::rule<class arctag, ast::arc_data> const arc_ = "arc";
+x3::rule<arctag, ast::arc_data> const arc_ = "arc";
 auto const arc__def = arcinit > double_ > unit > center > coord_ > -no_case[(lit("to")|sep)] > -coord_;
 
-x3::rule<class circletag, ast::circle_data> const circle_ = "circle";
+x3::rule<circletag, ast::circle_data> const circle_ = "circle";
 auto const circle__def = circleinit > double_ > unit > center > coord_ > x3::omit[*x3::char_];
 
-x3::rule<class areatag, ast_type > const area_ = "area";
-auto const area__def = ((coord_|arc_|text) % sep) | circle_ >> -(lit(".")|",");
+x3::rule<areatag, ast_type > const area_ = "area";
+auto const area__def = ((coord_|arc_|text) % sep) /*| circle_*/ >> -(lit(".")|",");
 
 BOOST_SPIRIT_DEFINE(lat_, lon_, coord_, arc_, circle_, area_);
 

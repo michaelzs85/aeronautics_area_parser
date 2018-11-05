@@ -12,6 +12,7 @@ SET(CMAKE_EXE_LINKER_FLAGS "${CMAKE_EXE_LINKER_FLAGS} -lstdc++fs")
 
 
 set(headers
+    annotationhandler.h
     geotypes.h
     geoparser.h
     geovincenty.h

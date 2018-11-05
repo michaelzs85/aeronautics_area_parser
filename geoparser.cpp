@@ -84,7 +84,7 @@ std::vector<boost::variant<Location, std::string>> translate(ast_type const& ast
 
 }
 
-std::vector<boost::variant<Location, std::string>> parse_area_description(std::string const& input)
+std::vector<boost::variant<Location, std::string>> parse_area_description(std::string const& input, parser::position_cache& positions)
 {
   namespace x3 = boost::spirit::x3;
   geo::parser::iterator_type iter = input.begin();
@@ -92,44 +92,28 @@ std::vector<boost::variant<Location, std::string>> parse_area_description(std::s
 
   std::vector<boost::variant<Location, std::string>> retval;
 
-  //while(iter != end)
-  {
-    ast_type ast;
+  ast_type ast;
 
-    bool r{};
-    try {
-      r = x3::phrase_parse(iter, end, area_(), x3::space, ast);
-    }
-    catch(std::exception e)
-    {
-      fmt::print("!!! expectation error!\n");
-      /*...*/
-    }
-    if(!r)
-    {
-      fmt::print(stderr, "ERROR! Could not parse a vaild area from '{}'\n", input);
-      fmt::print(stderr, "dist(begin, iter): {}\n", std::distance(input.begin(), iter));
-      //return {};
-    }
+  //auto const p = x3::with<parser::position_cache_tag>(std::ref(positions))[area_()];
+  auto const p = area_();
 
-    std::vector<boost::variant<Location, std::string>> parsed_points = _private::translate(ast);
-    retval.insert(retval.end(), parsed_points.begin(), parsed_points.end());
-
-    if(iter==end)
-    {
-
-      //break;
-    }
-
-    /*std::string words;
-    r = x3::phrase_parse(iter, end, -x3::lit("-") >> x3::lexeme[*(~x3::char_("-"))] >> -x3::lit("-"), x3::space, words);
-    if(!r)
-    {
-      fmt::print(stderr, "ERROR: Problem during skipping string: '{}'\n", std::string_view(&*iter, std::distance(iter, end)));
-      return {};
-    }
-    retval.emplace_back(words);*/
+  bool r{};
+  try {
+    r = x3::phrase_parse(iter, end, p, x3::space, ast);
   }
+  catch(std::exception e)
+  {
+    fmt::print(stderr, "!!! expectation error!\n");
+  }
+  if(!r)
+  {
+    fmt::print(stderr, "ERROR! Could not parse a vaild area from '{}'\n", input);
+    fmt::print(stderr, "dist(begin, iter): {}\n", std::distance(input.begin(), iter));
+  }
+
+  std::vector<boost::variant<Location, std::string>> parsed_points = _private::translate(ast);
+  retval.insert(retval.end(), parsed_points.begin(), parsed_points.end());
+
   return retval;
 }
 
